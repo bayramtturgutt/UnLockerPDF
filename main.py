@@ -1,8 +1,37 @@
 import sys
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QFileDialog, QMessageBox
+    QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QFileDialog, QMessageBox, QProgressBar
 )
+from PyQt5.QtCore import QThreadPool, QRunnable, pyqtSignal, QObject
 from unlock_pdf import unlock_pdf
+import time  # For adding delays
+
+class WorkerSignals(QObject):
+    progress = pyqtSignal(int)
+    finished = pyqtSignal(str)
+
+class UnlockWorker(QRunnable):
+    def __init__(self, input_file, output_file, start, end):
+        super().__init__()
+        self.input_file = input_file
+        self.output_file = output_file
+        self.start = start
+        self.end = end
+        self.signals = WorkerSignals()
+
+    def run(self):
+        for i in range(self.start, self.end + 1):
+            candidate_password = str(i).zfill(10)  # Pad with zeros to make it 10 digits
+            if unlock_pdf(candidate_password, self.input_file, self.output_file):
+                self.signals.finished.emit(f"Unlocked with password: {candidate_password}")
+                return
+
+            self.signals.progress.emit(1)  # Update progress
+
+            # Optional: Add a small delay to prevent overwhelming the system
+            time.sleep(0.01)  # Adjust delay as needed
+
+        self.signals.finished.emit("Failed to unlock PDF with provided passwords.")
 
 class PDFUnlocker(QWidget):
     def __init__(self):
@@ -44,12 +73,21 @@ class PDFUnlocker(QWidget):
         self.end_range_entry = QLineEdit()
         self.layout.addWidget(self.end_range_entry)
 
+        # Progress bar and percentage label
+        self.progress_bar = QProgressBar()
+        self.layout.addWidget(self.progress_bar)
+
+        self.percentage_label = QLabel("Progress: 0%")
+        self.layout.addWidget(self.percentage_label)
+
         # Start button
         self.start_button = QPushButton("Unlock PDF")
         self.start_button.clicked.connect(self.brute_force_unlock)
         self.layout.addWidget(self.start_button)
 
         self.setLayout(self.layout)
+
+        self.threadpool = QThreadPool()
 
     def select_input_file(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Select Input PDF", "", "PDF files (*.pdf)")
@@ -74,15 +112,23 @@ class PDFUnlocker(QWidget):
             QMessageBox.warning(self, "Input Error", "Please enter valid numbers for the password range.")
             return
 
-        QMessageBox.information(self, "Processing", "Starting to unlock the PDF... This may take a while.")
+        total_attempts = end_range - start_range + 1
+        self.progress_bar.setMaximum(total_attempts)
+        self.progress_bar.setValue(0)
 
-        for i in range(start_range, end_range + 1):
-            candidate_password = str(i).zfill(10)  # Pad with zeros to make it 10 digits
-            if unlock_pdf(candidate_password, input_file, output_file):
-                QMessageBox.information(self, "Success", f"Unlocked with password: {candidate_password}")
-                return
+        # Start the worker
+        worker = UnlockWorker(input_file, output_file, start_range, end_range)
+        worker.signals.progress.connect(self.update_progress)
+        worker.signals.finished.connect(self.show_result)
+        self.threadpool.start(worker)
 
-        QMessageBox.warning(self, "Failed", "Failed to unlock PDF with provided passwords.")
+    def update_progress(self, value):
+        self.progress_bar.setValue(self.progress_bar.value() + value)
+        percentage = (self.progress_bar.value() / self.progress_bar.maximum()) * 100
+        self.percentage_label.setText(f"Progress: {percentage:.2f}%")
+
+    def show_result(self, message):
+        QMessageBox.information(self, "Result", message)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
