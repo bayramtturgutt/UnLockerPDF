@@ -13,3 +13,11 @@ To install the required libraries, run:
 
 ```bash
 pip install -r requirements.txt
+```
+
+## Run the Application
+ Start the application by executing main.py:
+
+```bash
+python main.py
+```

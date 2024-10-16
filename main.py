@@ -11,7 +11,7 @@ def brute_force_unlock():
         messagebox.showwarning("Input Error", "Please specify input PDF file and output file name.")
         return
 
-    output_file = output_file_path + output_file_name + ".pdf"
+    output_file = f"{output_file_path}/{output_file_name}.pdf" if output_file_path else f"{output_file_name}.pdf"
 
     try:
         start_range = int(start_range_entry.get())
@@ -19,6 +19,8 @@ def brute_force_unlock():
     except ValueError:
         messagebox.showwarning("Input Error", "Please enter valid numbers for the password range.")
         return
+
+    messagebox.showinfo("Processing", "Starting to unlock the PDF... This may take a while.")
 
     for i in range(start_range, end_range + 1):
         candidate_password = str(i).zfill(10)  # Pad with zeros to make it 10 digits
@@ -53,7 +55,7 @@ output_file_name_entry = tk.Entry(root)
 output_file_name_entry.pack()
 
 # Input for output file path
-output_file_path_label = tk.Label(root, text="Output File Path:")
+output_file_path_label = tk.Label(root, text="Output File Path (optional):")
 output_file_path_label.pack()
 output_file_path_entry = tk.Entry(root)
 output_file_path_entry.pack()
