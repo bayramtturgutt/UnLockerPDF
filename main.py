@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QThreadPool, QRunnable, pyqtSignal, QObject
 from unlock_pdf import unlock_pdf
-import time  # For adding delays
+import time 
 
 class WorkerSignals(QObject):
     progress = pyqtSignal(int)
@@ -21,15 +21,14 @@ class UnlockWorker(QRunnable):
 
     def run(self):
         for i in range(self.start, self.end + 1):
-            candidate_password = str(i).zfill(10)  # Pad with zeros to make it 10 digits
+            candidate_password = str(i).zfill(10) 
             if unlock_pdf(candidate_password, self.input_file, self.output_file):
                 self.signals.finished.emit(f"Unlocked with password: {candidate_password}")
                 return
 
-            self.signals.progress.emit(1)  # Update progress
+            self.signals.progress.emit(1)  
 
-            # Optional: Add a small delay to prevent overwhelming the system
-            time.sleep(0.01)  # Adjust delay as needed
+            time.sleep(0.01) 
 
         self.signals.finished.emit("Failed to unlock PDF with provided passwords.")
 
@@ -41,7 +40,6 @@ class PDFUnlocker(QWidget):
 
         self.layout = QVBoxLayout()
 
-        # Input PDF file
         self.input_file_label = QLabel("Input PDF File:")
         self.layout.addWidget(self.input_file_label)
         self.input_file_entry = QLineEdit()
@@ -50,19 +48,16 @@ class PDFUnlocker(QWidget):
         self.input_file_button.clicked.connect(self.select_input_file)
         self.layout.addWidget(self.input_file_button)
 
-        # Output file name
         self.output_file_name_label = QLabel("Output File Name (without extension):")
         self.layout.addWidget(self.output_file_name_label)
         self.output_file_name_entry = QLineEdit()
         self.layout.addWidget(self.output_file_name_entry)
 
-        # Output file path
         self.output_file_path_label = QLabel("Output File Path (optional):")
         self.layout.addWidget(self.output_file_path_label)
         self.output_file_path_entry = QLineEdit()
         self.layout.addWidget(self.output_file_path_entry)
 
-        # Password range
         self.start_range_label = QLabel("Start Password (e.g. 0000000000):")
         self.layout.addWidget(self.start_range_label)
         self.start_range_entry = QLineEdit()
@@ -73,14 +68,12 @@ class PDFUnlocker(QWidget):
         self.end_range_entry = QLineEdit()
         self.layout.addWidget(self.end_range_entry)
 
-        # Progress bar and percentage label
         self.progress_bar = QProgressBar()
         self.layout.addWidget(self.progress_bar)
 
         self.percentage_label = QLabel("Progress: 0%")
         self.layout.addWidget(self.percentage_label)
 
-        # Start button
         self.start_button = QPushButton("Unlock PDF")
         self.start_button.clicked.connect(self.brute_force_unlock)
         self.layout.addWidget(self.start_button)
